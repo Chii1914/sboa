@@ -332,35 +332,35 @@ if __name__ == "__main__":
     ac3.ac3(ac3.arcs)
     print("Dominio final, después de ac-3:", ac3.domains)
     print("AC3 ejecutado sin problemas")
-    # Puedes calcular los upper bounds a partir de los dominios finales de ac3:
     upper_bounds = [max(ac3.domains[var]) for var in ['x1', 'x2', 'x3', 'x4', 'x5']]
     overall_upper_bound = max(upper_bounds)
     for var, ub in zip(['x1', 'x2', 'x3', 'x4', 'x5'], upper_bounds):
         print(f"Límite superior para {var}: {ub}")
-    # 1. Define la función objetivo para el Problema III
-    def problema_iii_objective(x_raw):
-        # Redondea a entero para los cálculos según la especificación del problema
-        x = np.round(x_raw).astype(int) 
-        values = [72, 92, 45, 65, 26] # Corresponde a x1, x2, x3, x4, x5
-        Z1 = (values[0] * x[0] + values[1] * x[1] +
-              values[2] * x[2] + values[3] * x[3] +
-              values[4] * x[4])
-        return Z1
-    
-    def multi_objective_combined(x_raw, w_ganancia=0.7, w_costo=0.3): # Igual ganancia que costo, modificar pesos de cada objetivo si es necesario
+    def calculate_gain(x_raw):
+        x = np.round(x_raw).astype(int)
+        return (72 * x[0] + 92 * x[1] + 45 * x[2] + 65 * x[3] + 26 * x[4])
+
+    def calculate_cost(x_raw):
+        x = np.round(x_raw).astype(int)
+        cost_tv = (174 * x[0] + 320 * x[1])
+        cost_dm = (50 * x[2] + 105 * x[3])
+        cost_dr = (50 * x[2] + 16 * x[4])
+        return cost_tv + cost_dm + cost_dr
+
+    # 1. Calcular multi-objetivo con scalarización 
+
+    def multi_objective_combined(x_raw, w_ganancia=0.7, w_costo=0.3): 
         x = np.round(x_raw).astype(int)
 
         # Calcular Ganancia (Z_ganancia)
         Z_ganancia = (72 * x[0] + 92 * x[1] + 45 * x[2] + 65 * x[3] + 26 * x[4])
 
-        # Calcular Costo (Z_costo) - Asegúrate de que esta suma sea la correcta de todos los costos
+        # Calcular Costo (Z_costo)
         cost_tv = (174 * x[0] + 320 * x[1])
         cost_dm = (50 * x[2] + 105 * x[3])
-        cost_dr = (50 * x[2] + 16 * x[4]) # x3 (Diario) puede estar aquí y en cost_dm, cuidado con doble conteo si no es intencional
+        cost_dr = (50 * x[2] + 16 * x[4]) 
         Z_costo = cost_tv + cost_dm + cost_dr
 
-        # Función objetivo combinada (queremos maximizar las ganancias y minimizar los costos)
-        # Convertimos la minimización de costo en maximización de -costo
         return (w_ganancia * Z_ganancia) - (w_costo * Z_costo)
 
     # 2. Define la función de restricciones para el Problema III
@@ -394,24 +394,19 @@ if __name__ == "__main__":
 
         return True # Todas las restricciones satisfechas
 
-    # 3. Crea una instancia de Problem dinámica para el Problema III
-    # Determina el límite superior general a partir de las cantidades máximas individuales
-   
-
+    # 3. Crear una instancia de Problem dinámico
     problema_instance = Problem(
         dimension=5,
         lower_bound=0,
         upper_bound=overall_upper_bound,
-        objective_function=multi_objective_combined, # Usa la función combinada para múltiples objetivos, la otra es problema_iii_objective
-        constraints_function=problema_iii_constraints, #problema_iii_constraints,
+        objective_function=multi_objective_combined, # Usa la función combinada para múltiples objetivos
+        constraints_function=problema_iii_constraints, 
         goal="maximize"
     )
     print("\n--- SEGUNDA PARTE DEL PROBLEMA, OPTIMIZACIÓN MEDIANTE ESCALARIZING ---")
-    # 4. Instancia y ejecuta SBOA con el problema dinámico
-    sboa_optimizer = SBOA(problem=problema_instance, n_birds=100, max_iterations=500) 
-    
+    # 4. Instancia y ejecuta SBOA 
+    sboa_optimizer = SBOA(problem=problema_instance, n_birds=100, max_iterations=300) 
     best_bird_found, best_fitness_found = sboa_optimizer.optimizer()
-
     print("\n--- Optimización Completada ---")
     
     best_solution_rounded = np.round(best_bird_found.position).astype(int)
@@ -426,6 +421,8 @@ if __name__ == "__main__":
         actual_rounded_fitness = problema_instance.fit(best_solution_rounded)
         print(f"Fitness real de la solución redondeada: {actual_rounded_fitness:.4f}")
 
+    # 5. Graficar la convergencia del algoritmo
+    print("\n--- Gráfica de Convergencia del Algoritmo SBOA ---")
     plt.figure(figsize=(10, 6))
     plt.plot(sboa_optimizer.p_best_history, label='Best Fitness (P_best)')
     plt.plot(sboa_optimizer.avg_fitness_history, label='Average Swarm Fitness')
@@ -436,7 +433,7 @@ if __name__ == "__main__":
     plt.title('SBOA Convergence')
     plt.legend()
     plt.grid(True)
-    plt.show()
+    
     data = {
     'Iteration': list(range(1, sboa_optimizer.max_iterations + 1)),
     'Best Fitness': sboa_optimizer.p_best_history,
@@ -444,7 +441,80 @@ if __name__ == "__main__":
     'Min Fitness': sboa_optimizer.min_fitness_history,
     'Max Fitness': sboa_optimizer.max_fitness_history
     }
+    print(f"Length of Iteration list: {len(data['Iteration'])}")
+    print(f"Length of Best Fitness list: {len(data['Best Fitness'])}")
+    print(f"Length of Average Fitness list: {len(data['Average Fitness'])}")
+    print(f"Length of Min Fitness list: {len(data['Min Fitness'])}")
+    print(f"Length of Max Fitness list: {len(data['Max Fitness'])}")
+    data['Iteration'].append(sboa_optimizer.max_iterations + 1) 
     df_fitness_summary = pd.DataFrame(data)
-    print("\nDescriptive Fitness Summary:")
-    print(df_fitness_summary.to_string()) # .to_string() for full display in console
 
+    print("\nSummary:")
+    print(df_fitness_summary.to_string()) 
+    plt.show()
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Best Fitness'], label='Best Fitness (P_best)', color='red')
+    plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Average Fitness'], label='Average Swarm Fitness', color='blue', linestyle='--')
+    plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Min Fitness'], label='Min Swarm Fitness', color='green', linestyle=':')
+    plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Max Fitness'], label='Max Fitness', color='purple', linestyle='-.') # Corrected label
+    plt.xlabel('Iteration')
+    plt.ylabel('Fitness')
+    plt.title('SBOA Convergence: Fitness Over Iterations')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+    
+    # Fronteras de pareto 
+
+    pesos = np.arange(0.1, 1.0, 0.1) # pesos desde 0.1 to 0.9
+    pareto_points = []
+
+    for w_ganancia in pesos:
+        w_costo = 1.0 - w_ganancia
+
+        problema_instance = Problem(
+        dimension=5,
+        lower_bound=0,
+        upper_bound=overall_upper_bound,
+        objective_function=multi_objective_combined, # Usa la función combinada para múltiples objetivos
+        constraints_function=problema_iii_constraints, 
+        goal="maximize"
+        )
+
+        sboa_optimizer_pareto = SBOA(problem=problema_instance, n_birds=50, max_iterations=200)
+
+        best_bird_found_run, _ = sboa_optimizer_pareto.optimizer()
+        if best_bird_found_run and problema_instance.check(best_bird_found_run.position):
+            # Ensure the solution is rounded to integer before calculating original objectives
+            rounded_solution = np.round(best_bird_found_run.position).astype(int)
+            actual_gain = calculate_gain(rounded_solution)
+            actual_cost = calculate_cost(rounded_solution)
+            pareto_points.append({'w_ganancia': w_ganancia, 'w_costo': w_costo,
+                                  'Gain': actual_gain, 'Cost': actual_cost,
+                              'Solution': rounded_solution})
+            print(f"  Best solution for these weights: Gain={actual_gain:.2f}, Cost={actual_cost:.2f}")
+        else:
+            print(f"  No feasible solution found for w_ganancia={w_ganancia:.1f}, w_costo={w_costo:.1f}")
+
+    gains = [p['Gain'] for p in pareto_points]
+    costs = [p['Cost'] for p in pareto_points]
+    weights_labels = [f"G:{p['w_ganancia']:.1f}\nC:{p['w_costo']:.1f}" for p in pareto_points]
+
+    plt.figure(figsize=(10, 7))
+    # Plot Cost on X-axis (to be minimized) and Gain on Y-axis (to be maximized)
+    plt.scatter(costs, gains, color='blue', s=100, zorder=2)
+    plt.plot(costs, gains, color='blue', linestyle='--', alpha=0.5, zorder=1) # Connect points
+
+    # Add labels for each point (optional, but good for understanding weights)
+    for i, txt in enumerate(weights_labels):
+        plt.annotate(txt, (costs[i], gains[i]), textcoords="offset points", xytext=(5,5), ha='left', fontsize=8)
+
+    for p in pareto_points:
+        print(f"Weights (G:{p['w_ganancia']:.1f}, C:{p['w_costo']:.1f}): Gain={p['Gain']:.2f}, Cost={p['Cost']:.2f}, Solution={p['Solution']}")
+
+    plt.title('Approximated Pareto Frontier (Gain vs. Cost)')
+    plt.xlabel('Total Cost (to be minimized)')
+    plt.ylabel('Total Gain (to be maximized)')
+    plt.grid(True)
+    plt.show()
