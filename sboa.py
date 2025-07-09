@@ -1,7 +1,9 @@
-import random
 import math
 import numpy as np
 import ac3
+import matplotlib.pyplot as plt
+import pandas as pd
+
 
 class Problem:
     """
@@ -124,6 +126,11 @@ class SBOA:
         self.perturbation_factor = perturbation_factor
         self.s_levy = 0.01 # De la descripción del artículo para el vuelo de Levy
         self.eta_levy = 1.5 # De la descripción del artículo para el vuelo de Levy
+        self.p_best_history = []
+        self.avg_fitness_history = []
+        self.min_fitness_history = []
+        self.max_fitness_history = []
+
 
     def _initialize_population(self):
         """
@@ -147,6 +154,12 @@ class SBOA:
             if bird.is_better_than(self.P_best):
                 self.P_best_fitness = bird.fitness
                 self.P_best = bird # Almacena el objeto ave
+        self.p_best_history.append(self.P_best_fitness)
+        current_swarm_fitnesses = [bird.fitness for bird in self.swarm]
+        self.avg_fitness_history.append(np.mean(current_swarm_fitnesses))
+        self.min_fitness_history.append(np.min(current_swarm_fitnesses))
+        self.max_fitness_history.append(np.max(current_swarm_fitnesses))
+
 
 
     def _calculate_F_t(self, t):
@@ -412,3 +425,26 @@ if __name__ == "__main__":
     else:
         actual_rounded_fitness = problema_instance.fit(best_solution_rounded)
         print(f"Fitness real de la solución redondeada: {actual_rounded_fitness:.4f}")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(sboa_optimizer.p_best_history, label='Best Fitness (P_best)')
+    plt.plot(sboa_optimizer.avg_fitness_history, label='Average Swarm Fitness')
+    plt.plot(sboa_optimizer.min_fitness_history, label='Min Swarm Fitness')
+    plt.plot(sboa_optimizer.max_fitness_history, label='Max Swarm Fitness')
+    plt.xlabel('Iteration')
+    plt.ylabel('Fitness')
+    plt.title('SBOA Convergence')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    data = {
+    'Iteration': list(range(1, sboa_optimizer.max_iterations + 1)),
+    'Best Fitness': sboa_optimizer.p_best_history,
+    'Average Fitness': sboa_optimizer.avg_fitness_history,
+    'Min Fitness': sboa_optimizer.min_fitness_history,
+    'Max Fitness': sboa_optimizer.max_fitness_history
+    }
+    df_fitness_summary = pd.DataFrame(data)
+    print("\nDescriptive Fitness Summary:")
+    print(df_fitness_summary.to_string()) # .to_string() for full display in console
+
