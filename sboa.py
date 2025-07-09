@@ -410,16 +410,17 @@ if __name__ == "__main__":
     print("\n--- Optimización Completada ---")
     
     best_solution_rounded = np.round(best_bird_found.position).astype(int)
+
     
     print(f"Solución óptima (redondeada): x1={best_solution_rounded[0]}, x2={best_solution_rounded[1]}, "
-          f"x3={best_solution_rounded[2]}, x4={best_solution_rounded[3]}, x5={best_solution_rounded[4]}")
+          f"x3={best_solution_rounded[2]}, x4={best_solution_rounded[3]}, x5={best_solution_rounded[4]} ")
     print(f"Fitness óptimo (Z1): {best_fitness_found:.4f}")
     
     if not problema_instance.check(best_solution_rounded):
         print("Advertencia: La solución 'óptima' final es en realidad inviable al ser redondeada y verificada.")
     else:
         actual_rounded_fitness = problema_instance.fit(best_solution_rounded)
-        print(f"Fitness real de la solución redondeada: {actual_rounded_fitness:.4f}")
+        print(f"Fitness real de la solución redondeada: {actual_rounded_fitness:.4f}, costo: {calculate_cost(best_solution_rounded):.2f}, ganancia: {calculate_gain(best_solution_rounded):.2f}")
 
     # 5. Graficar la convergencia del algoritmo
     print("\n--- Gráfica de Convergencia del Algoritmo SBOA ---")
@@ -428,9 +429,9 @@ if __name__ == "__main__":
     plt.plot(sboa_optimizer.avg_fitness_history, label='Average Swarm Fitness')
     plt.plot(sboa_optimizer.min_fitness_history, label='Min Swarm Fitness')
     plt.plot(sboa_optimizer.max_fitness_history, label='Max Swarm Fitness')
-    plt.xlabel('Iteration')
+    plt.xlabel('Iteración')
     plt.ylabel('Fitness')
-    plt.title('SBOA Convergence')
+    plt.title('SBOA Convergencia')
     plt.legend()
     plt.grid(True)
     
@@ -457,9 +458,9 @@ if __name__ == "__main__":
     plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Average Fitness'], label='Average Swarm Fitness', color='blue', linestyle='--')
     plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Min Fitness'], label='Min Swarm Fitness', color='green', linestyle=':')
     plt.plot(df_fitness_summary['Iteration'], df_fitness_summary['Max Fitness'], label='Max Fitness', color='purple', linestyle='-.') # Corrected label
-    plt.xlabel('Iteration')
+    plt.xlabel('Iteración')
     plt.ylabel('Fitness')
-    plt.title('SBOA Convergence: Fitness Over Iterations')
+    plt.title('SBOA Convergencia: Fitness sobre Iteraciones')
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
@@ -493,9 +494,9 @@ if __name__ == "__main__":
             pareto_points.append({'w_ganancia': w_ganancia, 'w_costo': w_costo,
                                   'Gain': actual_gain, 'Cost': actual_cost,
                               'Solution': rounded_solution})
-            print(f"  Best solution for these weights: Gain={actual_gain:.2f}, Cost={actual_cost:.2f}")
+            print(f"  Mejor solución para esos pesos: Gain={actual_gain:.2f}, Cost={actual_cost:.2f}")
         else:
-            print(f"  No feasible solution found for w_ganancia={w_ganancia:.1f}, w_costo={w_costo:.1f}")
+            print(f"  No existe solución para esos pesos={w_ganancia:.1f}, w_costo={w_costo:.1f}")
 
     gains = [p['Gain'] for p in pareto_points]
     costs = [p['Cost'] for p in pareto_points]
@@ -513,8 +514,8 @@ if __name__ == "__main__":
     for p in pareto_points:
         print(f"Weights (G:{p['w_ganancia']:.1f}, C:{p['w_costo']:.1f}): Gain={p['Gain']:.2f}, Cost={p['Cost']:.2f}, Solution={p['Solution']}")
 
-    plt.title('Approximated Pareto Frontier (Gain vs. Cost)')
-    plt.xlabel('Total Cost (to be minimized)')
-    plt.ylabel('Total Gain (to be maximized)')
+    plt.title('Frontera de pareto (Ganancia vs. Costo)')
+    plt.xlabel('Costo total (a minimizar)')
+    plt.ylabel('Ganancia total (a maximizar)')
     plt.grid(True)
     plt.show()
